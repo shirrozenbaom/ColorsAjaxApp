@@ -76,10 +76,20 @@
     <script>
         const api = '/api/colors';
 
+        const nameToHex = {
+          "שחור":"#000000","לבן":"#ffffff","אדום":"#ff0000","ירוק":"#00ff00","כחול":"#0073ff",
+          "צהוב":"#ffff00","ורוד":"#ffc0cb","סגול":"#800080","כתום":"#ffa500","תכלת":"#87cefa",
+          // תוכל להוסיף עוד לפי הצורך
+        };
+
         function colorSwatch(name){
-          const hex = /^#([0-9a-f]{3}){1,2}$/i.test(name) ? name : '#ddd';
+          let hex = "";
+          if (/^#([0-9a-f]{3}){1,2}$/i.test(name)) hex = name;          // כבר HEX
+          else if (nameToHex[name?.trim()]) hex = nameToHex[name.trim()]; // מיפוי שם->HEX
+          else hex = '#ddd';                                              // ברירת מחדל אפור
           return `<span title="${name}" style="display:inline-block;width:60px;height:22px;border:1px solid #ccc;background:${hex}"></span> <small>${name}</small>`;
         }
+
         function rowHtml(c){
           return `<tr data-id="${c.id}">
             <td class="handle" title="גרור">&#x2630;</td>
@@ -104,7 +114,7 @@
           $("#id").val(0); $("#name").val(''); $("#price").val(''); $("#displayOrder").val(''); $("#inStock").prop('checked', false);
         }
 
-        $("#colorForm").on("submit", function(e){
+        $("#colorForm").on("submit", function (e) {
           e.preventDefault();
           const item = {
             id: +$("#id").val(),
@@ -113,14 +123,30 @@
             displayOrder: +$("#displayOrder").val() || 0,
             inStock: $("#inStock").is(":checked")
           };
-          if(item.id === 0){
-            $.post(api, item, () => { load(); clearForm(); });
+
+          if (item.id === 0) {
+            // INSERT כ־JSON
+            $.ajax({
+              url: '/api/colors',
+              method: 'POST',
+              contentType: 'application/json',
+              data: JSON.stringify(item)
+            })
+            .done(() => { load(); clearForm(); })
+            .fail(xhr => alert('שגיאה בשמירה: ' + (xhr.responseText || xhr.status)));
           } else {
-            $.ajax({ url: `${api}/${item.id}`, method: 'PUT',
-                     contentType: 'application/json', data: JSON.stringify(item) })
-             .done(() => { load(); clearForm(); });
+            // UPDATE
+            $.ajax({
+              url: `/api/colors/${item.id}`,
+              method: 'PUT',
+              contentType: 'application/json',
+              data: JSON.stringify(item)
+            })
+            .done(() => { load(); clearForm(); })
+            .fail(xhr => alert('שגיאה בעדכון: ' + (xhr.responseText || xhr.status)));
           }
         });
+
         $("#newBtn").on("click", clearForm);
 
         $("#rows").on("click", ".edit", function(){
