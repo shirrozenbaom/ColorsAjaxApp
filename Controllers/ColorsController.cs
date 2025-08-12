@@ -46,7 +46,7 @@ public class ColorsController : ControllerBase
         return Ok();
     }
 
-    // בונוס: שמירת סדר אחרי גרירה
+    // שמירת סדר אחרי גרירה
     public record ReorderDto(int Id, int DisplayOrder);
 
     [HttpPost("reorder")]

@@ -79,14 +79,14 @@
         const nameToHex = {
           "שחור":"#000000","לבן":"#ffffff","אדום":"#ff0000","ירוק":"#00ff00","כחול":"#0073ff",
           "צהוב":"#ffff00","ורוד":"#ffc0cb","סגול":"#800080","כתום":"#ffa500","תכלת":"#87cefa",
-          // תוכל להוסיף עוד לפי הצורך
+          
         };
 
         function colorSwatch(name){
           let hex = "";
-          if (/^#([0-9a-f]{3}){1,2}$/i.test(name)) hex = name;          // כבר HEX
-          else if (nameToHex[name?.trim()]) hex = nameToHex[name.trim()]; // מיפוי שם->HEX
-          else hex = '#ddd';                                              // ברירת מחדל אפור
+          if (/^#([0-9a-f]{3}){1,2}$/i.test(name)) hex = name;         
+          else if (nameToHex[name?.trim()]) hex = nameToHex[name.trim()]; 
+          else hex = '#ddd';                                             
           return `<span title="${name}" style="display:inline-block;width:60px;height:22px;border:1px solid #ccc;background:${hex}"></span> <small>${name}</small>`;
         }
 
@@ -125,7 +125,7 @@
           };
 
           if (item.id === 0) {
-            // INSERT כ־JSON
+            // INSERT 
             $.ajax({
               url: '/api/colors',
               method: 'POST',
@@ -164,7 +164,7 @@
           $.ajax({ url: `${api}/${id}`, method: 'DELETE' }).done(load);
         });
 
-        // BONUS: גרירה + שמירת סדר
+        //גרירה + שמירת סדר
         $("#rows").sortable({
           handle: ".handle",
           update: function(){
