@@ -1,0 +1,157 @@
+﻿@page
+@{
+    ViewData["Title"] = "טבלת צבעים";
+    Layout = null;
+}
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewData["Title"]</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://code.jquery.com/ui/1.13.3/themes/base/jquery-ui.css" rel="stylesheet" />
+    <style>
+        body {
+            padding: 24px
+        }
+
+        .handle {
+            cursor: grab;
+            user-select: none
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2 class="mb-3">טבלת צבעים</h2>
+
+        <form id="colorForm" class="mb-4">
+            <input type="hidden" id="id" value="0" />
+            <div class="row g-2">
+                <div class="col-sm-3">
+                    <label class="form-label">שם הצבע / קוד HEX</label>
+                    <input class="form-control" id="name" placeholder="כחול או #0073ff" />
+                </div>
+                <div class="col-sm-2">
+                    <label class="form-label">מחיר</label>
+                    <input class="form-control" id="price" type="number" min="0" step="1" />
+                </div>
+                <div class="col-sm-2">
+                    <label class="form-label">סדר הצגה</label>
+                    <input class="form-control" id="displayOrder" type="number" min="1" step="1" />
+                </div>
+                <div class="col-sm-2 d-flex align-items-end">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="inStock" />
+                        <label class="form-check-label" for="inStock">במלאי</label>
+                    </div>
+                </div>
+                <div class="col-sm-3 d-flex align-items-end gap-2">
+                    <button class="btn btn-success" type="submit">שמור</button>
+                    <button id="newBtn" class="btn btn-secondary" type="button">חדש</button>
+                </div>
+            </div>
+        </form>
+
+        <table class="table table-striped align-middle">
+            <thead>
+                <tr>
+                    <th style="width:40px;"></th>
+                    <th>תיאור</th>
+                    <th>מחיר</th>
+                    <th>צבע</th>
+                    <th>סדר</th>
+                    <th>במלאי</th>
+                    <th style="width:180px;">פעולות</th>
+                </tr>
+            </thead>
+            <tbody id="rows"></tbody>
+        </table>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.13.3/jquery-ui.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const api = '/api/colors';
+
+        function colorSwatch(name){
+          const hex = /^#([0-9a-f]{3}){1,2}$/i.test(name) ? name : '#ddd';
+          return `<span title="${name}" style="display:inline-block;width:60px;height:22px;border:1px solid #ccc;background:${hex}"></span> <small>${name}</small>`;
+        }
+        function rowHtml(c){
+          return `<tr data-id="${c.id}">
+            <td class="handle" title="גרור">&#x2630;</td>
+            <td>${c.name}</td>
+            <td>${c.price}</td>
+            <td>${colorSwatch(c.name)}</td>
+            <td class="order">${c.displayOrder}</td>
+            <td>${c.inStock ? 'כן' : 'לא'}</td>
+            <td>
+              <button class="btn btn-sm btn-primary edit">עריכה</button>
+              <button class="btn btn-sm btn-danger delete">מחיקה</button>
+            </td>
+          </tr>`;
+        }
+        function load(){
+          $.get(api, data => {
+            $("#rows").empty();
+            data.forEach(c => $("#rows").append(rowHtml(c)));
+          });
+        }
+        function clearForm(){
+          $("#id").val(0); $("#name").val(''); $("#price").val(''); $("#displayOrder").val(''); $("#inStock").prop('checked', false);
+        }
+
+        $("#colorForm").on("submit", function(e){
+          e.preventDefault();
+          const item = {
+            id: +$("#id").val(),
+            name: $("#name").val().trim(),
+            price: +$("#price").val(),
+            displayOrder: +$("#displayOrder").val() || 0,
+            inStock: $("#inStock").is(":checked")
+          };
+          if(item.id === 0){
+            $.post(api, item, () => { load(); clearForm(); });
+          } else {
+            $.ajax({ url: `${api}/${item.id}`, method: 'PUT',
+                     contentType: 'application/json', data: JSON.stringify(item) })
+             .done(() => { load(); clearForm(); });
+          }
+        });
+        $("#newBtn").on("click", clearForm);
+
+        $("#rows").on("click", ".edit", function(){
+          const id = +$(this).closest("tr").data("id");
+          $.get(api, list => {
+            const c = list.find(x => x.id === id);
+            $("#id").val(c.id); $("#name").val(c.name); $("#price").val(c.price);
+            $("#displayOrder").val(c.displayOrder); $("#inStock").prop('checked', c.inStock);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          });
+        });
+        $("#rows").on("click", ".delete", function(){
+          if(!confirm("למחוק את הרשומה?")) return;
+          const id = $(this).closest("tr").data("id");
+          $.ajax({ url: `${api}/${id}`, method: 'DELETE' }).done(load);
+        });
+
+        // BONUS: גרירה + שמירת סדר
+        $("#rows").sortable({
+          handle: ".handle",
+          update: function(){
+            $("#rows tr").each((i, tr) => $(tr).find(".order").text(i+1));
+            const payload = $("#rows tr").map(function(i, tr){
+              return { id: +$(tr).data("id"), displayOrder: i+1 };
+            }).get();
+            $.ajax({ url: `${api}/reorder`, method: 'POST',
+                     contentType: 'application/json', data: JSON.stringify(payload) });
+          }
+        }).disableSelection();
+
+        $(load);
+    </script>
+</body>
+</html>
